@@ -39,6 +39,7 @@ enum class Source : uint8_t
     M(S3, "") \
     M(HIVE, "Hive") \
     M(AZURE, "AzureBlobStorage") \
+    M(ELASTICSEARCH, "Elasticsearch") \
     M(KAFKA, "Kafka") \
     M(NATS, "") \
     M(RABBITMQ, "RabbitMQ") \

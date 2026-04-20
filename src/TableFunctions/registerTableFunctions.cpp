@@ -27,6 +27,7 @@ void registerTableFunctions()
     registerTableFunctionMongoDB(factory);
 #endif
     registerTableFunctionRedis(factory);
+    registerTableFunctionElasticsearch(factory);
 
 #if USE_ARROWFLIGHT
     registerTableFunctionArrowFlight(factory);

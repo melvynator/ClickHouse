@@ -76,6 +76,7 @@ void registerStorageYTsaurus(StorageFactory & factory);
 #endif
 
 void registerStorageRedis(StorageFactory & factory);
+void registerStorageElasticsearch(StorageFactory & factory);
 
 
 #if USE_RDKAFKA
@@ -182,6 +183,7 @@ void registerStorages()
 
     registerStorageYTsaurus(factory);
     registerStorageRedis(factory);
+    registerStorageElasticsearch(factory);
 
 #if USE_RDKAFKA
     registerStorageKafka(factory);
