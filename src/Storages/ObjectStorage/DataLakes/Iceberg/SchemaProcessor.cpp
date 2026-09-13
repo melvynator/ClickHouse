@@ -393,7 +393,8 @@ namespace Iceberg
 
 std::string IcebergSchemaProcessor::default_link{};
 
-void IcebergSchemaProcessor::addIcebergTableSchema(Poco::JSON::Object::Ptr schema_ptr)
+void IcebergSchemaProcessor::addIcebergTableSchema(
+    Poco::JSON::Object::Ptr schema_ptr, SchemaSource source, bool tolerate_conflicting_manifest_schemas)
 {
     std::lock_guard lock(mutex);
 
@@ -416,10 +417,30 @@ void IcebergSchemaProcessor::addIcebergTableSchema(Poco::JSON::Object::Ptr schem
         }
         /// A schema-id is immutable per the Iceberg spec: re-binding it to different fields is malformed metadata.
         if (!schemasAreIdentical(*iceberg_table_schemas_by_ids.at(schema_id), *schema_ptr, type_mapping))
+        {
+            /// The 'schema' key in a manifest file header is only a copy of the table schema at the
+            /// time the manifest was written; metadata.json is the authoritative source (schemas from
+            /// it are always registered first). Broken writers have been observed storing degraded
+            /// copies in manifest headers under an already-used schema-id (e.g. AWS S3 Tables
+            /// maintenance jobs writing `timestamp` instead of `timestamptz`, or a schema containing
+            /// only the partition source columns). Other engines (Spark, Trino, PyIceberg, DuckDB)
+            /// resolve schemas from metadata.json and ignore such divergent header copies, so by
+            /// default we do the same and keep the already-registered schema.
+            if (source == SchemaSource::ManifestFile && tolerate_conflicting_manifest_schemas)
+            {
+                LOG_WARNING(
+                    getLogger("IcebergSchemaProcessor"),
+                    "Manifest file header carries schema-id {} which differs from the schema already "
+                    "registered for that id from metadata.json; ignoring the manifest header copy "
+                    "(disable setting `iceberg_tolerate_conflicting_manifest_schemas` to make this an error)",
+                    schema_id);
+                return;
+            }
             throw Exception(
                 ErrorCodes::ICEBERG_SPECIFICATION_VIOLATION,
                 "Iceberg schema with schema-id {} is bound to two different schemas across metadata versions",
                 schema_id);
+        }
     }
     else
     {

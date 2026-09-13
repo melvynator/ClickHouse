@@ -88,9 +88,21 @@ class IcebergSchemaProcessor
     using Node = ActionsDAG::Node;
 
 public:
+    /// Where a schema copy being registered comes from. metadata.json is the authoritative source;
+    /// the 'schema' key of a manifest file header is only a snapshot of the table schema at the time
+    /// the manifest was written and may be ignored if it conflicts with the metadata.json copy.
+    enum class SchemaSource
+    {
+        Metadata,
+        ManifestFile,
+    };
+
     explicit IcebergSchemaProcessor(bool allow_geo_parser_ = false) : allow_geo_parser(allow_geo_parser_) {}
 
-    void addIcebergTableSchema(Poco::JSON::Object::Ptr schema_ptr);
+    void addIcebergTableSchema(
+        Poco::JSON::Object::Ptr schema_ptr,
+        SchemaSource source = SchemaSource::Metadata,
+        bool tolerate_conflicting_manifest_schemas = false);
     std::shared_ptr<NamesAndTypesList> getClickHouseTableSchemaById(Int32 id);
     std::shared_ptr<const ActionsDAG> getSchemaTransformationDagByIds(Int32 old_id, Int32 new_id);
     NameAndTypePair getFieldCharacteristics(Int32 schema_version, Int32 source_id) const;
